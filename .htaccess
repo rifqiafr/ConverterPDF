@@ -1,0 +1,15 @@
+# Proteksi file & folder di aplikasi Konversi PDF
+Options -Indexes
+
+# Konfigurasi batas upload PHP jika menggunakan mod_php
+<IfModule mod_php.c>
+    php_value upload_max_filesize 100M
+    php_value post_max_size 100M
+    php_value memory_limit 256M
+</IfModule>
+
+# Cegah eksekusi script di folder storage
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^storage/ - [F,L]
+</IfModule>

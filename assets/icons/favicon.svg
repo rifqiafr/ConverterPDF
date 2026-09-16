@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="gradBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="gradFold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c7d2fe" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background Rounded Squircle -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#gradBg)" filter="url(#shadow)" />
+
+  <!-- Document Body Shape -->
+  <path d="M18 14 C18 12.895 18.895 12 20 12 L36 12 L46 22 L46 48 C46 49.105 45.105 50 44 50 L20 50 C18.895 50 18 49.105 18 48 Z" fill="#ffffff" />
+
+  <!-- Document Folded Corner -->
+  <path d="M36 12 L36 22 L46 22 Z" fill="url(#gradFold)" opacity="0.9" />
+
+  <!-- PDF Text / Badge Accent -->
+  <rect x="22" y="32" width="20" height="12" rx="3" fill="#ef4444" />
+  <text x="32" y="41" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="7.5" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">PDF</text>
+  
+  <!-- Subtle Document Lines -->
+  <rect x="23" y="22" width="9" height="2" rx="1" fill="#cbd5e1" />
+  <rect x="23" y="26" width="16" height="2" rx="1" fill="#cbd5e1" />
+</svg>

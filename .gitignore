@@ -1,0 +1,19 @@
+# Temporary uploads and results
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/results/*
+!storage/results/.gitkeep
+tests/test_files/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
