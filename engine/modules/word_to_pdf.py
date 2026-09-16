@@ -141,14 +141,38 @@ def convert_docx_via_reportlab(input_path: str, output_path: str) -> bool:
         sys.stderr.write(f"ReportLab fallback error: {str(e)}\n")
         return False
 
+def convert_docx_via_libreoffice(input_path: str, output_path: str) -> bool:
+    """Mengonversi Word ke PDF menggunakan LibreOffice headless (ideal untuk Linux, Docker, & Cloud)."""
+    try:
+        import subprocess
+        import shutil
+        out_dir = os.path.dirname(os.path.abspath(output_path))
+        cmd = ["soffice", "--headless", "--convert-to", "pdf", "--outdir", out_dir, os.path.abspath(input_path)]
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+        
+        base_name = os.path.splitext(os.path.basename(input_path))[0]
+        lo_output = os.path.join(out_dir, base_name + ".pdf")
+        if os.path.exists(lo_output):
+            if lo_output != os.path.abspath(output_path):
+                shutil.move(lo_output, os.path.abspath(output_path))
+            return True
+        return False
+    except Exception as e:
+        sys.stderr.write(f"LibreOffice notice: {str(e)}\n")
+        return False
+
 def convert_word_to_pdf(input_docx: str, output_pdf: str) -> dict:
     if not os.path.exists(input_docx):
         return {"success": False, "error": f"File input tidak ditemukan: {input_docx}"}
 
-    # 1. Coba lewat MS Word COM jika tersedia di Windows
+    # 1. Coba lewat MS Word COM jika di Windows
     success = convert_docx_via_com(input_docx, output_pdf)
+
+    # 2. Jika di Linux/Docker, coba lewat LibreOffice headless
+    if not success:
+        success = convert_docx_via_libreoffice(input_docx, output_pdf)
     
-    # 2. Jika COM tidak berhasil, gunakan konverter ReportLab murni
+    # 3. Jika belum berhasil, gunakan ReportLab fallback
     if not success:
         success = convert_docx_via_reportlab(input_docx, output_pdf)
 
