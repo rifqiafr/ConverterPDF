@@ -282,11 +282,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Deteksi apakah sedang berjalan di hosting statis seperti GitHub Pages
         const isStaticHost = window.location.hostname.includes('github.io');
         if (isStaticHost) {
-            if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+            if (['word_to_pdf', 'merge_pdf', 'split_pdf', 'jpg_to_pdf'].includes(state.currentTool.id)) {
                 runClientSideConversion();
                 return;
             } else {
-                handleProcessError(`Alat "${state.currentTool.title}" memerlukan backend PHP & Python (misal Laragon/Localhost). Di GitHub Pages yang bersifat statis, Anda dapat mencoba fitur "Gabungkan PDF" atau "Gambar ke PDF".`);
+                handleProcessError(`Alat "${state.currentTool.title}" memerlukan backend server Python (misal Laragon/Localhost). Di GitHub Pages statis, Anda dapat menggunakan Word ke PDF, Gabungkan PDF, atau Gambar ke PDF.`);
                 return;
             }
         }
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleProcessError((resp && resp.error) ? resp.error : 'Gagal mengunggah file.');
                 }
             } else {
-                if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+                if (['word_to_pdf', 'merge_pdf', 'split_pdf', 'jpg_to_pdf'].includes(state.currentTool.id)) {
                     runClientSideConversion();
                     return;
                 }
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         xhr.onerror = function() {
-            if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+            if (['word_to_pdf', 'merge_pdf', 'split_pdf', 'jpg_to_pdf'].includes(state.currentTool.id)) {
                 runClientSideConversion();
                 return;
             }
@@ -334,10 +334,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function runClientSideConversion() {
         try {
-            updateProgress(30, 'Memproses dokumen langsung di browser...');
+            updateProgress(25, 'Memproses dokumen langsung di peramban web...');
             const toolId = state.currentTool.id;
 
-            if (toolId === 'merge_pdf') {
+            if (toolId === 'word_to_pdf') {
+                const file = state.selectedFiles[0];
+                updateProgress(35, 'Membaca konten dokumen Word...');
+                const arrayBuffer = await file.arrayBuffer();
+
+                const tempContainer = document.createElement('div');
+                tempContainer.id = 'docxRenderContainer';
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                tempContainer.style.top = '0';
+                tempContainer.style.width = '794px';
+                tempContainer.style.background = '#ffffff';
+                tempContainer.style.color = '#000000';
+                tempContainer.style.padding = '20px';
+                document.body.appendChild(tempContainer);
+
+                updateProgress(60, 'Mengekstrak tata letak & teks dokumen...');
+                if (window.docx && window.docx.renderAsync) {
+                    await window.docx.renderAsync(arrayBuffer, tempContainer);
+                } else {
+                    throw new Error('Modul pengurai Word peramban belum siap.');
+                }
+
+                updateProgress(85, 'Menyusun berkas PDF...');
+                const baseName = file.name.replace(/\.[^/.]+$/, "");
+                const outName = baseName + '_konversi.pdf';
+
+                const opt = {
+                    margin: [8, 8, 8, 8],
+                    filename: outName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                const pdfBlob = await window.html2pdf().set(opt).from(tempContainer).outputPdf('blob');
+                document.body.removeChild(tempContainer);
+
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                updateProgress(100, 'Selesai!');
+                setTimeout(() => {
+                    showResult({
+                        file_name: outName,
+                        download_name: outName,
+                        size: pdfBlob.size,
+                        elapsed_time: '2.1',
+                        token: 'client',
+                        blob_url: blobUrl,
+                        message: 'Berhasil mengonversi Word ke PDF langsung di peramban web.'
+                    });
+                }, 400);
+            } else if (toolId === 'merge_pdf') {
                 const mergedPdf = await PDFLib.PDFDocument.create();
                 for (let i = 0; i < state.selectedFiles.length; i++) {
                     updateProgress(30 + Math.round((i / state.selectedFiles.length) * 50), `Menggabungkan berkas ${i+1} dari ${state.selectedFiles.length}...`);
