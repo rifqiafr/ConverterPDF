@@ -279,6 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('files[]', file);
         });
 
+        // Deteksi apakah sedang berjalan di hosting statis seperti GitHub Pages
+        const isStaticHost = window.location.hostname.includes('github.io');
+        if (isStaticHost) {
+            if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+                runClientSideConversion();
+                return;
+            } else {
+                handleProcessError(`Alat "${state.currentTool.title}" memerlukan backend PHP & Python (misal Laragon/Localhost). Di GitHub Pages yang bersifat statis, Anda dapat mencoba fitur "Gabungkan PDF" atau "Gambar ke PDF".`);
+                return;
+            }
+        }
+
         const xhr = new XMLHttpRequest();
         state.activeXhr = xhr;
 
@@ -300,16 +312,89 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleProcessError((resp && resp.error) ? resp.error : 'Gagal mengunggah file.');
                 }
             } else {
+                if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+                    runClientSideConversion();
+                    return;
+                }
                 handleProcessError(`Kesalahan jaringan/server (HTTP ${xhr.status})`);
             }
         };
 
         xhr.onerror = function() {
-            handleProcessError('Koneksi ke server terputus.');
+            if (['merge_pdf', 'jpg_to_pdf'].includes(state.currentTool.id) && window.PDFLib) {
+                runClientSideConversion();
+                return;
+            }
+            handleProcessError('Koneksi ke backend server tidak ditemukan. Pastikan server lokal atau Laragon aktif.');
         };
 
         xhr.open('POST', 'backend/routes.php?action=upload', true);
         xhr.send(formData);
+    }
+
+    async function runClientSideConversion() {
+        try {
+            updateProgress(30, 'Memproses dokumen langsung di browser...');
+            const toolId = state.currentTool.id;
+
+            if (toolId === 'merge_pdf') {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                for (let i = 0; i < state.selectedFiles.length; i++) {
+                    updateProgress(30 + Math.round((i / state.selectedFiles.length) * 50), `Menggabungkan berkas ${i+1} dari ${state.selectedFiles.length}...`);
+                    const file = state.selectedFiles[i];
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach((page) => mergedPdf.addPage(page));
+                }
+                const pdfBytes = await mergedPdf.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+                updateProgress(100, 'Selesai!');
+                setTimeout(() => {
+                    showResult({
+                        file_name: 'gabungan.pdf',
+                        download_name: 'dokumen_gabungan.pdf',
+                        size: blob.size,
+                        elapsed_time: '1.0',
+                        token: 'client',
+                        blob_url: blobUrl,
+                        message: 'Berhasil menggabungkan PDF langsung di peramban.'
+                    });
+                }, 400);
+            } else if (toolId === 'jpg_to_pdf') {
+                const doc = await PDFLib.PDFDocument.create();
+                for (let i = 0; i < state.selectedFiles.length; i++) {
+                    const file = state.selectedFiles[i];
+                    const arrayBuffer = await file.arrayBuffer();
+                    let img;
+                    if (file.type.includes('png')) {
+                        img = await doc.embedPng(arrayBuffer);
+                    } else {
+                        img = await doc.embedJpg(arrayBuffer);
+                    }
+                    const page = doc.addPage([img.width, img.height]);
+                    page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+                }
+                const pdfBytes = await doc.save();
+                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const blobUrl = URL.createObjectURL(blob);
+                updateProgress(100, 'Selesai!');
+                setTimeout(() => {
+                    showResult({
+                        file_name: 'gambar.pdf',
+                        download_name: 'gambar_konversi.pdf',
+                        size: blob.size,
+                        elapsed_time: '0.8',
+                        token: 'client',
+                        blob_url: blobUrl,
+                        message: 'Berhasil mengonversi gambar ke PDF langsung di peramban.'
+                    });
+                }, 400);
+            }
+        } catch (err) {
+            handleProcessError('Gagal memproses dokumen: ' + err.message);
+        }
     }
 
     function triggerConversion() {
@@ -421,8 +506,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // URL Download
-        const downloadUrl = `backend/routes.php?action=download&file=${encodeURIComponent(result.file_name)}&token=${encodeURIComponent(result.token)}&name=${encodeURIComponent(result.download_name)}`;
-        btnDownloadResult.href = downloadUrl;
+        if (result.blob_url) {
+            btnDownloadResult.href = result.blob_url;
+            btnDownloadResult.setAttribute('download', result.download_name);
+        } else {
+            const downloadUrl = `backend/routes.php?action=download&file=${encodeURIComponent(result.file_name)}&token=${encodeURIComponent(result.token)}&name=${encodeURIComponent(result.download_name)}`;
+            btnDownloadResult.href = downloadUrl;
+            btnDownloadResult.removeAttribute('download');
+        }
 
         // Siapkan Prompt Aksi Lanjutan Cerdas
         setupNextActionPrompt(result);
