@@ -2,9 +2,8 @@
 title: Converter PDF
 emoji: 📑
 colorFrom: indigo
-colorTo: cyan
-sdk: docker
-app_port: 7860
+colorTo: blue
+sdk: static
 pinned: false
 ---
 
