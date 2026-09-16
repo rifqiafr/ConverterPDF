@@ -1,3 +1,13 @@
+---
+title: Converter PDF
+emoji: 📑
+colorFrom: indigo
+colorTo: cyan
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # PDF Converter - Platform Konversi & Manajemen Dokumen Modern
 
 Aplikasi utilitas dokumen berbasis web yang memungkinkan konversi Word ke PDF, PDF ke Word, penggabungan, pemisahan, kompresi, serta manajemen berbagai format dokumen secara cepat, aman, dan mempertahankan tata letak asli dokumen.

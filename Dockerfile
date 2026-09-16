@@ -22,6 +22,9 @@ RUN echo "upload_max_filesize = 100M" > /usr/local/etc/php/conf.d/uploads.ini \
     && echo "memory_limit = 256M" >> /usr/local/etc/php/conf.d/uploads.ini \
     && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
 
+# Konfigurasi Apache agar mendengarkan port 7860 (Port standar Hugging Face Spaces)
+RUN sed -i 's/80/7860/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
+
 # Direktori kerja
 WORKDIR /var/www/html
 
@@ -31,12 +34,12 @@ COPY . /var/www/html
 # Instal dependensi Python
 RUN pip3 install --no-cache-dir --break-system-packages -r engine/requirements.txt
 
-# Siapkan folder storage dan hak akses
+# Siapkan folder storage dan hak akses (Hugging Face Spaces menggunakan non-root user)
 RUN mkdir -p storage/uploads storage/results \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage
+    && chmod -R 777 storage \
+    && chown -R www-data:www-data /var/www/html
 
-# Port standar
-EXPOSE 80
+# Port Hugging Face Spaces
+EXPOSE 7860
 
 CMD ["apache2-foreground"]
